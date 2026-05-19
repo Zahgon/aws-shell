@@ -115,13 +115,6 @@ def create_default_layout(app, message='',
     else:
         toolbars = []
 
-    def get_height(cli):
-        # If there is an autocompletion menu to be shown, make sure that our
-        # layout has at least a minimal height in order to display it.
-        if reserve_space_for_menu and not cli.is_done:
-            return LayoutDimension(min=8)
-        else:
-            return LayoutDimension()
 
     def separator():
         return ConditionalContainer(
@@ -205,24 +198,7 @@ def _split_multiline_prompt(get_prompt_tokens):
     another one with the tokens to be shown at the first line of the input.
 
     """
-    def before(cli):
-        result = []
-        found_nl = False
-        for token, char in reversed(explode_tokens(get_prompt_tokens(cli))):
-            if char == '\n':
-                found_nl = True
-            elif found_nl:
-                result.insert(0, (token, char))
-        return result
 
-    def first_input_line(cli):
-        result = []
-        for token, char in reversed(explode_tokens(get_prompt_tokens(cli))):
-            if char == '\n':
-                break
-            else:
-                result.insert(0, (token, char))
-        return result
 
     return before, first_input_line
 

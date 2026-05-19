@@ -21,22 +21,4 @@ class DocRetriever(object):
         self._doc_index = doc_index
         self._cache = {}
 
-    def extract_description(self, dot_cmd):
-        try:
-            docs = self._doc_index[dot_cmd]
-        except KeyError:
-            return u''
-        index = docs.find('SYNOPSIS')
-        if index > 0:
-            docs = docs[:index]
-        return docs
 
-    def extract_param(self, dot_cmd, param_name):
-        try:
-            docs = self._doc_index[dot_cmd]
-        except KeyError:
-            return u''
-        index = docs.find('OPTIONS')
-        param_start_index = docs.find(param_name, index)
-        param_end_index = docs.find('--', param_start_index + 1)
-        return docs[param_start_index:param_end_index]

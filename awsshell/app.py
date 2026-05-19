@@ -257,17 +257,7 @@ class AWSShell(object):
 
     def load_config(self):
         """Load the config from the config file or template."""
-        config = Config()
-        self.config_obj = config.load('awsshellrc')
-        self.config_section = self.config_obj['aws-shell']
-        self.model_completer.match_fuzzy = self.config_section.as_bool(
-            'match_fuzzy')
-        self.enable_vi_bindings = self.config_section.as_bool(
-            'enable_vi_bindings')
-        self.show_completion_columns = self.config_section.as_bool(
-            'show_completion_columns')
-        self.show_help = self.config_section.as_bool('show_help')
-        self.theme = self.config_section['theme']
+        pass
 
     def save_config(self):
         """Save the config to the config file."""
@@ -279,12 +269,6 @@ class AWSShell(object):
         self.config_section['theme'] = self.theme
         self.config_obj.write()
 
-    @property
-    def cli(self):
-        if self._cli is None or self.refresh_cli:
-            self._cli = self.create_cli_interface(self.show_completion_columns)
-            self.refresh_cli = False
-        return self._cli
 
     def run(self):
         while True:
@@ -329,28 +313,9 @@ class AWSShell(object):
         :raises: :class:`InputInterrupt <exceptions.InputInterrupt>`.
 
         """
-        self.refresh_cli = True
-        self.cli.request_redraw()
-        raise InputInterrupt
+        pass
 
-    def create_layout(self, display_completions_in_columns, toolbar):
-        from awsshell.lexer import ShellLexer
-        lexer = ShellLexer
-        if self.config_section['theme'] == 'none':
-            lexer = None
-        return create_default_layout(
-            self, u'aws> ', lexer=lexer, reserve_space_for_menu=True,
-            display_completions_in_columns=display_completions_in_columns,
-            get_bottom_toolbar_tokens=toolbar.handler)
 
-    def create_buffer(self, completer, history):
-        return Buffer(
-            history=history,
-            auto_suggest=AutoSuggestFromHistory(),
-            enable_history_search=True,
-            completer=completer,
-            complete_while_typing=Always(),
-            accept_action=AcceptAction.RETURN_DOCUMENT)
 
     def create_key_manager(self):
         """Create the :class:`KeyManager`.
@@ -365,148 +330,9 @@ class AWSShell(object):
             options take effect within the current session.
 
         """
-        def set_match_fuzzy(match_fuzzy):
-            """Setter for fuzzy matching mode.
+        pass
 
-            :type match_fuzzy: bool
-            :param match_fuzzy: The match fuzzy flag.
 
-            """
-            self.model_completer.match_fuzzy = match_fuzzy
 
-        def set_enable_vi_bindings(enable_vi_bindings):
-            """Setter for vi mode keybindings.
 
-            If vi mode is off, emacs mode is enabled by default by
-            `prompt_toolkit`.
 
-            :type enable_vi_bindings: bool
-            :param enable_vi_bindings: The enable Vi bindings flag.
-
-            """
-            self.enable_vi_bindings = enable_vi_bindings
-
-        def set_show_completion_columns(show_completion_columns):
-            """Setter for showing the completions in columns flag.
-
-            :type show_completion_columns: bool
-            :param show_completion_columns: The show completions in
-                multiple columns flag.
-
-            """
-            self.show_completion_columns = show_completion_columns
-
-        def set_show_help(show_help):
-            """Setter for showing the help container flag.
-
-            :type show_help: bool
-            :param show_help: The show help flag.
-
-            """
-            self.show_help = show_help
-
-        return KeyManager(
-            lambda: self.model_completer.match_fuzzy, set_match_fuzzy,
-            lambda: self.enable_vi_bindings, set_enable_vi_bindings,
-            lambda: self.show_completion_columns, set_show_completion_columns,
-            lambda: self.show_help, set_show_help,
-            self.stop_input_and_refresh_cli)
-
-    def create_application(self, completer, history,
-                           display_completions_in_columns):
-        self.key_manager = self.create_key_manager()
-        toolbar = Toolbar(
-            lambda: self.model_completer.match_fuzzy,
-            lambda: self.enable_vi_bindings,
-            lambda: self.show_completion_columns,
-            lambda: self.show_help)
-        style_factory = StyleFactory(self.theme)
-        buffers = {
-            'clidocs': Buffer(read_only=True)
-        }
-
-        if self.enable_vi_bindings:
-            editing_mode = EditingMode.VI
-        else:
-            editing_mode = EditingMode.EMACS
-
-        return Application(
-            editing_mode=editing_mode,
-            layout=self.create_layout(display_completions_in_columns, toolbar),
-            mouse_support=False,
-            style=style_factory.style,
-            buffers=buffers,
-            buffer=self.create_buffer(completer, history),
-            on_abort=AbortAction.RETRY,
-            on_exit=AbortAction.RAISE_EXCEPTION,
-            on_input_timeout=self.on_input_timeout,
-            key_bindings_registry=self.key_manager.manager.registry,
-        )
-
-    def on_input_timeout(self, cli):
-        if not self.show_help:
-            return
-        document = cli.current_buffer.document
-        text = document.text
-        LOG.debug("document.text = %s", text)
-        LOG.debug("current_command = %s", self.completer.current_command)
-        if text.strip():
-            command = self.completer.current_command
-            key_name = '.'.join(command.split()).encode('utf-8')
-            last_option = self.completer.last_option
-            if last_option:
-                self.current_docs = self._docs.extract_param(
-                    key_name, last_option)
-            else:
-                self.current_docs = self._docs.extract_description(key_name)
-        else:
-            self.current_docs = u''
-
-        position = cli.buffers['clidocs'].document.cursor_position
-        # if the docs to be displayed have changed, reset position to 0
-        if cli.buffers['clidocs'].text != self.current_docs:
-            position = 0
-
-        cli.buffers['clidocs'].reset(
-            initial_document=Document(
-                self.current_docs,
-                cursor_position=position
-            )
-        )
-        cli.request_redraw()
-
-    def create_cli_interface(self, display_completions_in_columns):
-        # A CommandLineInterface from prompt_toolkit
-        # accepts two things: an application and an
-        # event loop.
-        loop = create_eventloop()
-        app = self.create_application(self.completer,
-                                      self.file_history,
-                                      display_completions_in_columns)
-        cli = CommandLineInterface(application=app, eventloop=loop,
-                                   input=self._input, output=self._output)
-        return cli
-
-    @property
-    def profile(self):
-        return self._profile
-
-    @profile.setter
-    def profile(self, new_profile_name):
-        # There's only two things that need to know about new profile
-        # changes.
-        #
-        # First, the actual command runner.  If we want
-        # to use a different profile, it should ensure that the CLI
-        # commands that get run use the new profile (via the
-        # AWS_DEFAULT_PROFILE env var).
-        #
-        # Second, we also need to let the server side autocompleter know.
-        #
-        # Given this is easy to manage by hand, I don't think
-        # it's worth adding an event system or observers just yet.
-        # If this gets hard to manage, the complexity of those systems
-        # would be worth it.
-        self._env['AWS_DEFAULT_PROFILE'] = new_profile_name
-        self.completer.change_profile(new_profile_name)
-        self._profile = new_profile_name

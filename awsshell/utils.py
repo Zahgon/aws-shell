@@ -56,8 +56,6 @@ class DataOnly(HTMLParser):
         self.reset()
         self.lines = []
 
-    def handle_data(self, data):
-        self.lines.append(data)
 
     def get_data(self):
         return ''.join(self.lines)
@@ -95,7 +93,7 @@ class FSLayer(object):
             * The filename is a file (not a directory).
 
         """
-        return os.path.isfile(filename)
+        pass
 
 
 class InMemoryFSLayer(object):
@@ -116,5 +114,3 @@ class InMemoryFSLayer(object):
             contents = contents.encode('utf-8')
         return contents
 
-    def file_exists(self, filename):
-        return filename in self._file_mapping

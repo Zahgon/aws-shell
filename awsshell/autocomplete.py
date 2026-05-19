@@ -25,14 +25,7 @@ class AWSCLIModelCompleter(object):
         self.cmd_path = [self._current_name]
         self.match_fuzzy = match_fuzzy
 
-    @property
-    def global_arg_metadata(self):
-        return self._index[self._root_name]['argument_metadata']
 
-    @property
-    def arg_metadata(self):
-        # Returns the required arguments for the current level.
-        return self._current.get('argument_metadata', {})
 
     def reset(self):
         # Resets all the state.  Called after a user runs
@@ -137,15 +130,3 @@ class AWSCLIModelCompleter(object):
             self.autocomplete(line[:i])
         return self.autocomplete(line)
 
-    def _autocomplete_options(self, last_word):
-        global_args = []
-        # Autocomplete argument names.
-        current_arg_completions = [
-            cmd for cmd in self._current['arguments']
-            if cmd.startswith(last_word)]
-        if self._current_name != self._root_name:
-            # Also autocomplete global arguments.
-            global_args = [
-                cmd for cmd in self._global_options if
-                cmd.startswith(last_word)]
-        return current_arg_completions + global_args

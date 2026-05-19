@@ -121,20 +121,7 @@ class CompleterDescriber(object):
             in order to complete the response.
 
         """
-        service_index = self._index[service]
-        LOG.debug(service_index)
-        if param not in service_index.get('operations', {}).get(operation, {}):
-            LOG.debug("param not in index: %s", param)
-            return None
-        p = service_index['operations'][operation][param]
-        resource_name = p['resourceName']
-        resource_identifier = p['resourceIdentifier']
-
-        resource_index = service_index['resources'][resource_name]
-        completion_operation = resource_index['operation']
-        path = resource_index['resourceIdentifier'][resource_identifier]
-        return ServerCompletion(service=service, operation=completion_operation,
-                                params={}, path=path)
+        pass
 
 
 class CachedClientCreator(object):
@@ -144,11 +131,6 @@ class CachedClientCreator(object):
         self._session = session
         self._client_cache = {}
 
-    def create_client(self, service_name):
-        if service_name not in self._client_cache:
-            client = self._session.create_client(service_name)
-            self._client_cache[service_name] = client
-        return self._client_cache[service_name]
 
 
 class CompleterDescriberCreator(object):
@@ -168,23 +150,9 @@ class CompleterDescriberCreator(object):
         :return: A CompleterDescriber object.
 
         """
-        if service_name not in self._describer_cache:
-            query = self._create_completer_query(service_name)
-            self._describer_cache[service_name] = query
-        return self._describer_cache[service_name]
+        pass
 
-    def _create_completer_query(self, service_name):
-        completions_model = self._loader.load_service_model(
-            service_name, 'completions-1')
-        cq = CompleterDescriber({service_name: completions_model})
-        return cq
 
-    def services_with_completions(self):
-        if self._services_with_completions is not None:
-            return self._services_with_completions
-        self._services_with_completions = set(
-            self._loader.list_available_services(type_name='completions-1'))
-        return self._services_with_completions
 
 
 class ServerSideCompleter(object):
@@ -213,42 +181,7 @@ class ServerSideCompleter(object):
             completions were found an empty list is returned.
 
         """
-        # Example call:
-        # service='ec2',
-        # operation='terminate-instances',
-        # param='InstanceIds'.
-        if service not in self._describer_creator.services_with_completions():
-            return []
-        try:
-            client = self._client_creator.create_client(service)
-        except BotoCoreError as e:
-            # create_client() could raise an exception if the session
-            # isn't fully configured (say it's missing a region).
-            # However, we don't want to turn off all server side
-            # completions because it's still possible to create
-            # clients for some services without a region, e.g. IAM.
-            LOG.debug("Error when trying to create a client for %s",
-                      service, exc_info=True)
-            return []
-        api_operation_name = client.meta.method_to_api_mapping.get(
-            operation.replace('-', '_'))
-        if api_operation_name is None:
-            return []
-        # Now we need to convert the param name to the
-        # casing used by the API.
-        completer = self._describer_creator.create_completer_query(service)
-        result = completer.describe_autocomplete(
-            service, api_operation_name, param)
-        if result is None:
-            return
-        try:
-            response = getattr(client, xform_name(result.operation, '_'))()
-        except Exception as e:
-            LOG.debug("Error when calling %s.%s: %s", service,
-                      result.operation, e, exc_info=True)
-            return
-        results = jmespath.search(result.path, response)
-        return results
+        pass
 
 
 def main():
